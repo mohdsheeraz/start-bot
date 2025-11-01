@@ -13,7 +13,7 @@
     "@twa-dev/sdk": "^8.0.2",
     "next": "15.2.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
     "firebase-admin": "^12.0.0"
   },
   "devDependencies": {
