@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-
+//wallet page
 type User = { id:string, points:number, wallet?:string|null };
 
 export default function WalletPage(){
