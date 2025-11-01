@@ -1,6 +1,6 @@
 // app/api/tasks/[id]/complete/route.ts
 import { NextResponse } from 'next/server';
-import admin from '../../../../lib/firebaseAdmin';
+import admin from '../../../../../lib/firebaseAdmin';
 
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
