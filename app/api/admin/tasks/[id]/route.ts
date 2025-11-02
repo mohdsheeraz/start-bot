@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     // parse id from the request URL path: /api/tasks/<id>/complete
     const url = new URL(request.url);
-    const parts = url.pathname.split('/').filter(Boolean); // removes empty elements
+    const parts = url.pathname.split('/').filter(Boolean);
     // parts example: ['api','tasks','<id>','complete']
     const id = parts.length >= 3 ? parts[parts.length - 2] : undefined;
     if (!id) return NextResponse.json({ ok: false, error: 'missing task id' }, { status: 400 });
