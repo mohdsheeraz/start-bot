@@ -22,7 +22,6 @@ export async function POST(request: Request, context: any) {
     const ut = await userTaskRef.get();
     if (ut.exists) return NextResponse.json({ ok: false, error: 'already completed' }, { status: 400 });
 
-    // reward
     const uRef = db.collection('users').doc(userId);
     const uSnap = await uRef.get();
     const user = uSnap.exists ? (uSnap.data() as any) : { id: userId, points: 0, level: 1 };
