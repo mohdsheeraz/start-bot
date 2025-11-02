@@ -1,15 +1,12 @@
-// app/api/admin/tasks/[id]/route.ts
 import { NextResponse } from 'next/server';
 import admin from '../../../../../lib/firebaseAdmin';
 
-// ✅ GET: Fetch a task by ID (for admin view)
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// ✅ GET: Fetch a task by ID
+export async function GET(request: Request, context: { params: { id: string } }) {
   try {
+    const { id } = context.params;
     const db = admin.firestore();
-    const taskRef = db.collection('tasks').doc(params.id);
+    const taskRef = db.collection('tasks').doc(id);
     const taskSnap = await taskRef.get();
 
     if (!taskSnap.exists) {
@@ -23,17 +20,14 @@ export async function GET(
   }
 }
 
-// ✅ PUT: Update a task by ID
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// ✅ PUT: Update a task
+export async function PUT(request: Request, context: { params: { id: string } }) {
   try {
+    const { id } = context.params;
     const data = await request.json();
     const db = admin.firestore();
-    const taskRef = db.collection('tasks').doc(params.id);
+    await db.collection('tasks').doc(id).set(data, { merge: true });
 
-    await taskRef.set(data, { merge: true });
     return NextResponse.json({ ok: true, message: 'Task updated' });
   } catch (error) {
     console.error('Admin PUT error:', error);
@@ -41,14 +35,13 @@ export async function PUT(
   }
 }
 
-// ✅ DELETE: Remove a task by ID
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+// ✅ DELETE: Remove a task
+export async function DELETE(request: Request, context: { params: { id: string } }) {
   try {
+    const { id } = context.params;
     const db = admin.firestore();
-    await db.collection('tasks').doc(params.id).delete();
+    await db.collection('tasks').doc(id).delete();
+
     return NextResponse.json({ ok: true, message: 'Task deleted' });
   } catch (error) {
     console.error('Admin DELETE error:', error);
