@@ -1,13 +1,9 @@
-// app/api/tasks/[id]/complete/route.ts
 import { NextResponse } from 'next/server';
 import admin from '../../../../../lib/firebaseAdmin';
 
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, context: { params: { id: string } }) {
   try {
-    const { id } = params;
+    const { id } = context.params;
     const body = await request.json();
     const userId = body.userId;
 
@@ -44,8 +40,8 @@ export async function POST(
     });
 
     await userRef.set({ ...user, points: newPoints }, { merge: true });
-    const updatedUser = await userRef.get();
 
+    const updatedUser = await userRef.get();
     return NextResponse.json({ ok: true, user: updatedUser.data() });
   } catch (error) {
     console.error('Task complete error:', error);
