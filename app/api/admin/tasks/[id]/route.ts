@@ -1,15 +1,19 @@
 // app/api/tasks/[id]/complete/route.ts
-// @ts-nocheck
+// Extract task id from request.url to avoid Next.js route-handler typing issues
 import { NextResponse } from 'next/server';
 import admin from '../../../../../lib/firebaseAdmin';
 
-export async function POST(request: Request, context: any) {
+export async function POST(request: Request) {
   try {
     const body = await request.json();
     const userId = body.userId;
     if (!userId) return NextResponse.json({ ok: false, error: 'missing userId' }, { status: 400 });
 
-    const { id } = context?.params || {};
+    // parse id from the request URL path: /api/tasks/<id>/complete
+    const url = new URL(request.url);
+    const parts = url.pathname.split('/').filter(Boolean); // removes empty elements
+    // parts example: ['api','tasks','<id>','complete']
+    const id = parts.length >= 3 ? parts[parts.length - 2] : undefined;
     if (!id) return NextResponse.json({ ok: false, error: 'missing task id' }, { status: 400 });
 
     const db = admin.firestore();
