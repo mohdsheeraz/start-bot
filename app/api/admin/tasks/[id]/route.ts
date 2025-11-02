@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import admin from '../../../../../lib/firebaseAdmin';
 
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: Request, context: any) {
   try {
     const token = request.headers.get('x-admin-token');
     if (process.env.ADMIN_TOKEN && token !== process.env.ADMIN_TOKEN) {
@@ -11,7 +11,7 @@ export async function PUT(request: Request, context: { params: { id: string } })
 
     const body = await request.json();
     const { title, reward, type } = body;
-    const { id } = context.params;
+    const { id } = context.params as { id: string };
 
     if (!title && reward === undefined && !type) {
       return NextResponse.json({ ok: false, error: 'nothing to update' }, { status: 400 });
@@ -36,14 +36,14 @@ export async function PUT(request: Request, context: { params: { id: string } })
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(request: Request, context: any) {
   try {
     const token = request.headers.get('x-admin-token');
     if (process.env.ADMIN_TOKEN && token !== process.env.ADMIN_TOKEN) {
       return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
     }
 
-    const { id } = context.params;
+    const { id } = context.params as { id: string };
     const db = admin.firestore();
     await db.collection('tasks').doc(id).delete();
 
