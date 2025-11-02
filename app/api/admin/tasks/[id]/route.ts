@@ -1,18 +1,15 @@
-// app/api/tasks/[id]/complete/route.ts
-// Extract task id from request.url to avoid Next.js route-handler typing issues
+// app/api/tasks/[id]/complete/route.js
 import { NextResponse } from 'next/server';
 import admin from '../../../../../lib/firebaseAdmin';
 
-export async function POST(request: Request) {
+export async function POST(request) {
   try {
     const body = await request.json();
     const userId = body.userId;
     if (!userId) return NextResponse.json({ ok: false, error: 'missing userId' }, { status: 400 });
 
-    // parse id from the request URL path: /api/tasks/<id>/complete
     const url = new URL(request.url);
     const parts = url.pathname.split('/').filter(Boolean);
-    // parts example: ['api','tasks','<id>','complete']
     const id = parts.length >= 3 ? parts[parts.length - 2] : undefined;
     if (!id) return NextResponse.json({ ok: false, error: 'missing task id' }, { status: 400 });
 
@@ -20,7 +17,7 @@ export async function POST(request: Request) {
     const taskRef = db.collection('tasks').doc(id);
     const taskSnap = await taskRef.get();
     if (!taskSnap.exists) return NextResponse.json({ ok: false, error: 'task not found' }, { status: 404 });
-    const task = taskSnap.data() as any;
+    const task = taskSnap.data();
 
     const userTaskRef = db.collection('userTasks').doc(`${userId}_${id}`);
     const ut = await userTaskRef.get();
@@ -28,7 +25,7 @@ export async function POST(request: Request) {
 
     const uRef = db.collection('users').doc(userId);
     const uSnap = await uRef.get();
-    const user = uSnap.exists ? (uSnap.data() as any) : { id: userId, points: 0, level: 1 };
+    const user = uSnap.exists ? uSnap.data() : { id: userId, points: 0, level: 1 };
     const newPoints = (user.points || 0) + (task?.reward || 0);
 
     await userTaskRef.set({ userId, taskId: id, completedAt: new Date().toISOString() });
