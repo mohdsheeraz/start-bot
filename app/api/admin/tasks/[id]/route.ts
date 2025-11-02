@@ -1,40 +1,57 @@
-// app/api/tasks/[id]/complete/route.js
+// app/api/admin/tasks/[id]/route.ts
 import { NextResponse } from 'next/server';
 import admin from '../../../../../lib/firebaseAdmin';
 
-export async function POST(request) {
+// ✅ GET: Fetch a task by ID (for admin view)
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const body = await request.json();
-    const userId = body.userId;
-    if (!userId) return NextResponse.json({ ok: false, error: 'missing userId' }, { status: 400 });
-
-    const url = new URL(request.url);
-    const parts = url.pathname.split('/').filter(Boolean);
-    const id = parts.length >= 3 ? parts[parts.length - 2] : undefined;
-    if (!id) return NextResponse.json({ ok: false, error: 'missing task id' }, { status: 400 });
-
     const db = admin.firestore();
-    const taskRef = db.collection('tasks').doc(id);
+    const taskRef = db.collection('tasks').doc(params.id);
     const taskSnap = await taskRef.get();
-    if (!taskSnap.exists) return NextResponse.json({ ok: false, error: 'task not found' }, { status: 404 });
-    const task = taskSnap.data();
 
-    const userTaskRef = db.collection('userTasks').doc(`${userId}_${id}`);
-    const ut = await userTaskRef.get();
-    if (ut.exists) return NextResponse.json({ ok: false, error: 'already completed' }, { status: 400 });
+    if (!taskSnap.exists) {
+      return NextResponse.json({ ok: false, error: 'Task not found' }, { status: 404 });
+    }
 
-    const uRef = db.collection('users').doc(userId);
-    const uSnap = await uRef.get();
-    const user = uSnap.exists ? uSnap.data() : { id: userId, points: 0, level: 1 };
-    const newPoints = (user.points || 0) + (task?.reward || 0);
+    return NextResponse.json({ ok: true, task: taskSnap.data() });
+  } catch (error) {
+    console.error('Admin GET error:', error);
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
+  }
+}
 
-    await userTaskRef.set({ userId, taskId: id, completedAt: new Date().toISOString() });
-    await uRef.set({ ...user, points: newPoints }, { merge: true });
+// ✅ PUT: Update a task by ID
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const data = await request.json();
+    const db = admin.firestore();
+    const taskRef = db.collection('tasks').doc(params.id);
 
-    const newU = await uRef.get();
-    return NextResponse.json({ ok: true, user: newU.data() });
-  } catch (e) {
-    console.error('task-complete error', e);
-    return NextResponse.json({ ok: false, error: 'server error' }, { status: 500 });
+    await taskRef.set(data, { merge: true });
+    return NextResponse.json({ ok: true, message: 'Task updated' });
+  } catch (error) {
+    console.error('Admin PUT error:', error);
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
+  }
+}
+
+// ✅ DELETE: Remove a task by ID
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const db = admin.firestore();
+    await db.collection('tasks').doc(params.id).delete();
+    return NextResponse.json({ ok: true, message: 'Task deleted' });
+  } catch (error) {
+    console.error('Admin DELETE error:', error);
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
   }
 }
