@@ -1,31 +1,55 @@
-// app/api/claim/route.ts
 import { NextResponse } from 'next/server';
 import admin from '../../../lib/firebaseAdmin';
 
-
 export async function POST(req: Request) {
-try {
-const body = await req.json();
-const userId = body.userId || 'demo-user-1';
-const db = admin.firestore();
-const uRef = db.collection('users').doc(userId);
-const snap = await uRef.get();
-const u = snap.exists ? (snap.data() as any) : { id: userId, points: 0, level: 1, lastClaimISO: null };
+  try {
+    const { userId } = await req.json();
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: 'User ID required' });
+    }
 
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    
+    if (!userDoc.exists) {
+      return NextResponse.json({ ok: false, error: 'User not found' });
+    }
 
-const last = u.lastClaimISO ? new Date(u.lastClaimISO).getTime() : 0;
-const canClaim = Date.now() - last >= 24 * 60 * 60 * 1000;
-if (!canClaim) return NextResponse.json({ ok: false, error: 'Claim not ready' }, { status: 400 });
+    const userData = userDoc.data();
+    const now = new Date();
+    const lastClaim = userData?.lastClaimISO ? new Date(userData.lastClaimISO) : null;
+    
+    // Check if 24 hours have passed
+    if (lastClaim && (now.getTime() - lastClaim.getTime()) < 24 * 60 * 60 * 1000) {
+      return NextResponse.json({ 
+        ok: false, 
+        error: 'Claim available only every 24 hours' 
+      });
+    }
 
+    // Calculate reward based on level
+    const baseReward = 100;
+    const levelMultiplier = (userData?.level || 1) * 0.5;
+    const reward = Math.floor(baseReward * (1 + levelMultiplier));
 
-const reward = 10 + ((u.level || 1) - 1) * 2;
-await uRef.set({ ...u, points: (u.points || 0) + reward, lastClaimISO: new Date().toISOString() }, { merge: true });
+    // Update user
+    await userRef.update({
+      points: admin.firestore.FieldValue.increment(reward),
+      lastClaimISO: now.toISOString(),
+      totalEarned: admin.firestore.FieldValue.increment(reward || 0)
+    });
 
+    // Get updated user
+    const updatedDoc = await userRef.get();
+    
+    return NextResponse.json({ 
+      ok: true, 
+      user: updatedDoc.data() 
+    });
 
-const newSnap = await uRef.get();
-return NextResponse.json({ ok: true, user: newSnap.data() });
-} catch (e) {
-console.error(e);
-return NextResponse.json({ ok: false, error: 'server error' }, { status: 500 });
-}
+  } catch (e) {
+    console.error('Claim error:', e);
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
+  }
 }
