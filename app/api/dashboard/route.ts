@@ -2,17 +2,59 @@
 import { NextResponse } from 'next/server';
 import admin from '../../../lib/firebaseAdmin';
 
-
 export async function GET(req: Request) {
-try {
-const url = new URL(req.url);
-const userId = url.searchParams.get('userId') || 'demo-user-1';
-const db = admin.firestore();
-const doc = await db.collection('users').doc(userId).get();
-const user = doc.exists ? doc.data() : { id: userId, points: 0, level: 1, lastClaimISO: null };
-return NextResponse.json({ ok: true, data: user });
-} catch (e) {
-console.error(e);
-return NextResponse.json({ ok: false, error: 'server error' }, { status: 500 });
-}
+  try {
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: 'User ID required' });
+    }
+
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+    const doc = await userRef.get();
+
+    if (doc.exists) {
+      const userData = doc.data();
+      return NextResponse.json({ 
+        ok: true, 
+        data: {
+          id: userId,
+          points: userData?.points || 0,
+          level: userData?.level || 1,
+          miningPower: userData?.miningPower || 1,
+          lastClaimISO: userData?.lastClaimISO || null,
+          wallet: userData?.wallet || null,
+          username: userData?.username || null,
+          completedTasks: userData?.completedTasks || [],
+          totalEarned: userData?.totalEarned || 0,
+          createdAt: userData?.createdAt || new Date().toISOString()
+        }
+      });
+    } else {
+      // Create new user with complete structure
+      const newUser = {
+        id: userId,
+        points: 0,
+        level: 1,
+        miningPower: 1,
+        lastClaimISO: null,
+        wallet: null,
+        username: null,
+        completedTasks: [],
+        totalEarned: 0,
+        createdAt: new Date().toISOString()
+      };
+      
+      await userRef.set(newUser);
+      return NextResponse.json({ ok: true, data: newUser });
+    }
+  } catch (e) {
+    console.error('Dashboard API error:', e);
+    return NextResponse.json({ 
+      ok: false, 
+      error: 'Server error' 
+    }, { status: 500 });
+  }
 }
