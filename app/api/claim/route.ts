@@ -1,9 +1,11 @@
+// app/api/claim/route.ts
 import { NextResponse } from 'next/server';
 import admin from '../../../lib/firebaseAdmin';
 
 export async function POST(req: Request) {
   try {
     const { userId } = await req.json();
+    
     if (!userId) {
       return NextResponse.json({ ok: false, error: 'User ID required' });
     }
@@ -11,7 +13,7 @@ export async function POST(req: Request) {
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
-    
+
     if (!userDoc.exists) {
       return NextResponse.json({ ok: false, error: 'User not found' });
     }
@@ -28,28 +30,36 @@ export async function POST(req: Request) {
       });
     }
 
-    // Calculate reward based on level
+    // Calculate reward based on level and mining power
     const baseReward = 100;
     const levelMultiplier = (userData?.level || 1) * 0.5;
-    const reward = Math.floor(baseReward * (1 + levelMultiplier));
+    const miningMultiplier = (userData?.miningPower || 1) * 0.2;
+    const reward = Math.floor(baseReward * (1 + levelMultiplier + miningMultiplier));
 
     // Update user
-    await userRef.update({
+    const updateData = {
       points: admin.firestore.FieldValue.increment(reward),
       lastClaimISO: now.toISOString(),
-      totalEarned: admin.firestore.FieldValue.increment(reward || 0)
-    });
+      totalEarned: admin.firestore.FieldValue.increment(reward)
+    };
 
-    // Get updated user
+    await userRef.update(updateData);
+
+    // Get updated user data
     const updatedDoc = await userRef.get();
+    const updatedUser = updatedDoc.data();
     
     return NextResponse.json({ 
       ok: true, 
-      user: updatedDoc.data() 
+      user: updatedUser,
+      reward: reward
     });
 
   } catch (e) {
     console.error('Claim error:', e);
-    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
+    return NextResponse.json({ 
+      ok: false, 
+      error: 'Server error during claim' 
+    }, { status: 500 });
   }
 }
